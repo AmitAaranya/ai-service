@@ -1,5 +1,6 @@
+import mimetypes
 import os
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 import requests
 
 app = Flask(__name__)
@@ -7,6 +8,7 @@ app = Flask(__name__)
 AI_BACKEND_URL = os.getenv("AI_BACKEND_URL","http://127.0.0.1:5001")
 if not AI_BACKEND_URL:
     raise Exception
+DATA_PATH = os.getenv("DATA_PATH","../data")
 
 
 @app.route("/")
@@ -18,14 +20,34 @@ def detect():
     if 'image' not in request.files:
         return jsonify({'error': 'No image file found'}), 400
     file = request.files['image']
-    files = {'image': file}
-    response = requests.post(AI_BACKEND_URL+"/image/detect", files=files)
+    file_path = os.path.join(DATA_PATH,file.filename)
+    file.save(file_path)
+    with open(file_path, 'rb') as f:
+        files = {'image': (file.filename, f, 'image/jpeg')} 
+        response = requests.post(AI_BACKEND_URL+"/image/detect", files=files)
     
     if response.status_code == 200:
         result = response.json()
         return jsonify(result)
     else:
         return jsonify({"error": "Object detection failed"}), 500
+
+
+
+@app.get("/image/<path>")
+def show_image(path):
+    # Check if the file exists
+    if not os.path.exists(path):
+        return jsonify({"error": "Image path does not exist"}), 404
+
+    # Get the MIME type of the file based on its extension
+    mime_type, _ = mimetypes.guess_type(path)
+    if not mime_type:
+        mime_type = 'application/octet-stream'  # Default MIME type if unable to guess
+    
+    # Send the file with the correct MIME type
+    return send_file(path, mimetype=mime_type)
+
 
 @app.get("/check-ai-backend")
 def test_ai_backend():
@@ -37,4 +59,4 @@ def test_ai_backend():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",port=5000)
+    app.run(debug=True,host="0.0.0.0",port=5000)
