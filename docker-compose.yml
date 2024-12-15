@@ -7,6 +7,8 @@ services:
       - "5000:5000"
     depends_on:
       - ai-backend
+    env_file:
+      - .env
     networks:
       - backend-network
 

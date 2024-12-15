@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Preview and Detect</title>
+    <title>Object Detection</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,6 +18,7 @@
         }
 
         .container {
+            align-self: baseline;
             display: flex;
             flex-direction: column;
             width: 80%;
@@ -25,14 +27,14 @@
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            padding: 20px;
+            padding-top: 10px;
         }
 
         .input-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .input-container label {
@@ -61,12 +63,14 @@
             gap: 20px;
         }
 
-        .image-container .left, .image-container .right {
+        .image-container .left,
+        .image-container .right {
             width: 50%;
             padding: 20px;
         }
 
         .left {
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -82,11 +86,14 @@
         }
 
         .right {
+            overflow-y: auto;
+            /* Enable vertical scrolling */
+            max-height: 75vh;
+            flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
             align-items: center;
-            background-color: #f5f5f5;
             padding: 10px;
         }
 
@@ -109,107 +116,123 @@
             background-color: #218838;
         }
 
-        .detect-result {
-            margin-top: 20px;
-            display: none;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            width: 100%;
-            background-color: #e9f7e9;
-            color: #333;
+        .json-container {
             font-size: 1.1em;
-            text-align: center;
+            width: 100%;
+            word-wrap: break-word;
+            line-height: 1.6;
         }
 
+        .json-container code {
+            display: block;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* New styling for author */
+        .author {
+            text-align: center;
+            font-size: 0.7em;
+            color: #555;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <!-- Top section with Select Image button -->
-    <div class="input-container">
-        <label for="imageInput">Select Image</label>
-        <input type="file" id="imageInput" accept="image/*">
+    <div class="container">
+        <!-- Top section with Select Image button -->
+        <div class="input-container">
+            <label for="imageInput">Select Image</label>
+            <input type="file" id="imageInput" accept="image/*">
+        </div>
+
+        <!-- Bottom section with image preview and Detect button -->
+        <div class="image-container">
+            <!-- Left Div for displaying image -->
+            <div class="left">
+                <img id="imagePreview" src="" alt="Image Preview">
+            </div>
+
+            <!-- Right Div with Detect button and Result -->
+            <div class="right">
+                <!-- Detect Button at the top of the right div -->
+                <div class="detect-button">
+                    <button id="detectButton" disabled style="display: none;">Detect</button>
+                </div>
+
+                <!-- Detect Result section, initially hidden -->
+                <div class="json-container" id="detectResult">
+                    <!-- This area will display the result from the API -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Author Information -->
+        <div class="author">
+            <p>
+                Author: AMIT | 
+                <a href="amitaaranya@gmail.com" target="_blank">amitaaranya@gmail.com</a> | 
+                <a href="https://www.linkedin.com/in/amitaaranya/" target="_blank">LinkedIn</a>
+            </p>
+        </div>
     </div>
 
-    <!-- Bottom section with image preview and Detect button -->
-    <div class="image-container">
-        <!-- Left Div for displaying image -->
-        <div class="left">
-            <img id="imagePreview" src="" alt="Image Preview">
-        </div>
-        
-        <!-- Right Div with Detect button and Result -->
-        <div class="right">
-            <!-- Detect Button at the top of the right div -->
-            <div class="detect-button">
-                <button id="detectButton" disabled>Detect</button>
-            </div>
-            
-            <!-- Detect Result section, initially hidden -->
-            <div class="detect-result" id="detectResult">
-                <!-- This area will display the result from the API -->
-            </div>
-        </div>
-    </div>
-</div>
+    <script>
+        let selectedImage = null;
 
-<script>
-    let selectedImage = null;
+        // Event listener for selecting image
+        document.getElementById('imageInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
 
-    // Event listener for selecting image
-    document.getElementById('imageInput').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
+            reader.onload = function (e) {
+                const imagePreview = document.getElementById('imagePreview');
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block'; // Show the image
+                selectedImage = file; // Store the selected image
+                const detectButton = document.getElementById('detectButton');
+                detectButton.style.display = 'block'; // Show the Detect button
+                detectButton.disabled = false; // Enable the Detect button
+            };
 
-        reader.onload = function(e) {
-            const imagePreview = document.getElementById('imagePreview');
-            imagePreview.src = e.target.result;
-            imagePreview.style.display = 'block'; // Show the image
-            selectedImage = file; // Store the selected image
-            const detectButton = document.getElementById('detectButton');
-            detectButton.style.display = 'block'; // Show the Detect button
-            detectButton.disabled = false; // Enable the Detect button
-        };
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        });
 
-        if (file) {
-            reader.readAsDataURL(file);
-        }
-    });
+        // Event listener for Detect button
+        document.getElementById('detectButton').addEventListener('click', function () {
+            if (selectedImage) {
+                const formData = new FormData();
+                formData.append("image", selectedImage);
 
-    // Event listener for Detect button
-    document.getElementById('detectButton').addEventListener('click', function() {
-        if (selectedImage) {
-            const formData = new FormData();
-            formData.append("image", selectedImage);
+                // Call the backend API "detect" using fetch
+                fetch("http://127.0.0.1:5000/detect", {
+                    method: "POST",
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Detection result:", data);
 
-            // Call the backend API "detect" using fetch
-            fetch("http://127.0.0.1:5000/detect", {
-                method: "POST",
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Detection result:", data);
-                
-                // Display the result in the right section
-                const detectResultDiv = document.getElementById('detectResult');
-                detectResultDiv.style.display = 'block'; // Show the result section
-                detectResultDiv.innerHTML = `
-                    <strong>Detection Result:</strong><br>
-                    ${JSON.stringify(data)}  <!-- Customize this to display the result better -->
-                `;
-            })
-            .catch(error => {
-                console.error("Error detecting image:", error);
-                alert('Error in detection!');
-            });
-        } else {
-            alert("Please select an image first.");
-        }
-    });
-</script>
+                        // Display the result in the right section
+                        const detectResultDiv = document.getElementById('detectResult');
+                        detectResultDiv.style.display = 'block'; // Show the result section
+                        detectResultDiv.innerHTML = `
+                    <strong>Detection Result:</strong>
+                    <pre><code>${JSON.stringify(data, null, 4)}</code></pre>`;
+                    })
+                    .catch(error => {
+                        console.error("Error detecting image:", error);
+                        alert('Error in detection!');
+                    });
+            } else {
+                alert("Please select an image first.");
+            }
+        });
+    </script>
 
 </body>
+
 </html>

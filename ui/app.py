@@ -4,7 +4,10 @@ import requests
 
 app = Flask(__name__)
 
-AI_BACKEND_URL = "http://ai-backend:5001"
+AI_BACKEND_URL = os.getenv("AI_BACKEND_URL","http://127.0.0.1:5001")
+if not AI_BACKEND_URL:
+    raise Exception
+
 
 @app.route("/")
 def home():
@@ -14,13 +17,15 @@ def home():
 def detect():
     if 'image' not in request.files:
         return jsonify({'error': 'No image file found'}), 400
-    
     file = request.files['image']
-    file_path = os.path.join("static", file.filename)
-    file.save(file_path)
+    files = {'image': file}
+    response = requests.post(AI_BACKEND_URL+"/image/detect", files=files)
     
-    return jsonify({"status": 0,"data": [1]})
-
+    if response.status_code == 200:
+        result = response.json()
+        return jsonify(result)
+    else:
+        return jsonify({"error": "Object detection failed"}), 500
 
 @app.get("/check-ai-backend")
 def test_ai_backend():
