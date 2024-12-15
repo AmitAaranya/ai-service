@@ -7,8 +7,11 @@ services:
       - "5000:5000"
     depends_on:
       - ai-backend
-    env_file:
-      - .env
+    environment:
+      - AI_BACKEND_URL=http://ai-backend:5001
+      - DATA_PATH=/app/data
+    volumes:
+      - ./data:/app/data
     networks:
       - backend-network
 
@@ -16,8 +19,13 @@ services:
     build: ./ai-backend
     ports:
       - "5001:5001"
+    environment:
+      - DATA_PATH=/app/data
+    volumes:
+      - ./data:/app/data
     networks:
       - backend-network
+
 
 networks:
   backend-network:
