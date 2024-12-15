@@ -8,7 +8,7 @@ app = Flask(__name__)
 AI_BACKEND_URL = os.getenv("AI_BACKEND_URL","http://127.0.0.1:5001")
 if not AI_BACKEND_URL:
     raise Exception
-DATA_PATH = os.getenv("DATA_PATH","../data")
+DATA_PATH = os.getenv("DATA_PATH",os.path.join("..","data"))
 
 
 @app.route("/")
@@ -34,19 +34,19 @@ def detect():
 
 
 
-@app.get("/image/<path>")
-def show_image(path):
+@app.get("/image/<filename>")
+def show_image(filename):
     # Check if the file exists
-    if not os.path.exists(path):
+    if not os.path.exists(os.path.join(DATA_PATH,filename)):
         return jsonify({"error": "Image path does not exist"}), 404
 
     # Get the MIME type of the file based on its extension
-    mime_type, _ = mimetypes.guess_type(path)
+    mime_type, _ = mimetypes.guess_type(os.path.join(DATA_PATH,filename))
     if not mime_type:
         mime_type = 'application/octet-stream'  # Default MIME type if unable to guess
     
     # Send the file with the correct MIME type
-    return send_file(path, mimetype=mime_type)
+    return send_file(os.path.join(DATA_PATH,filename), mimetype=mime_type)
 
 
 @app.get("/check-ai-backend")

@@ -43,8 +43,9 @@ def detect_objects():
     output_image_path = os.path.join(DATA_PATH,f"out_{file.filename}")
     output_img_np = create_bounding_box(detected_objects,np.array(img),output_image_path)
     res = {
+        'status': "success",
         'detections': detected_objects,
-        'path': output_image_path
+        'filename': file.filename
     }
     json.dump(res,open(os.path.join(DATA_PATH,f"{file.filename}.json"),"w"),indent=4)
     return jsonify(res)
